@@ -1,38 +1,52 @@
 # LLM Finetune Lab
 
-Fine-tunes an open instruction-tuned language model to extract structured
-fields — parties, obligations, deadlines, governing law — from contract
-clauses. It's the same class of task [LexiBridge](https://github.com/arion-a/lexibridge)
-draws on for legal research and drafting, but trained into the model rather
-than retrieved and prompted at inference time.
+**Question:** does QLoRA fine-tuning of Qwen2.5-7B-Instruct extract the parties, obligations, deadlines and governing law from a contract clause better than the same model used zero-shot?
 
-## Status
+**Status: plan only.** This repository contains this README and a `LICENSE`. There is no code, no dataset and no result yet.
 
-Planned — training script, dataset, and eval harness in progress.
+![Planned pipeline: data, target, fine-tune, evaluate, compare](docs/img/overview.svg)
+
+## Definitions
+
+| Term | Meaning |
+| --- | --- |
+| **Clause extraction** | Reading one contract clause and returning a JSON object with the fields party, obligation, deadline and governing law. |
+| **QLoRA** | Fine-tuning that keeps the base model's weights frozen in 4-bit precision and trains small low-rank adapter matrices on top. |
+| **Zero-shot baseline** | The same Qwen2.5-7B-Instruct, given the clause and an instruction, with no fine-tuning. |
+| **CUAD** | The Contract Understanding Atticus Dataset: contracts annotated with clause categories ([source](https://www.atticusprojectai.org/cuad)). |
+| **Exact match / F1** | Exact match: the extracted value equals the labelled value. F1: overlap between extracted and labelled values, balancing missed and extra items. |
+| **Held-out clauses** | Clauses never used in training or validation, used only for the final comparison. |
 
 ## Plan
 
-- **Model**: Qwen2.5-7B-Instruct, loaded in 4-bit (QLoRA).
-- **Task**: structured extraction from a contract clause to JSON (party,
-  obligation, deadline, governing-law fields), scored by exact-match/F1
-  against labeled held-out clauses.
-- **Data**: [CUAD](https://www.atticusprojectai.org/cuad) (Contract
-  Understanding Atticus Dataset) as a base, filtered and cleaned to the
-  extraction task, with a documented train/val/test split and leakage
-  checks.
-- **Method**: QLoRA supervised fine-tuning (`peft` + `bitsandbytes` +
-  `trl`'s `SFTTrainer`).
-- **Infra**: single-GPU training (RunPod).
-- **Eval**: zero-shot baseline vs. the fine-tuned checkpoint on the same
-  held-out clauses, reported as a metric delta with sample-size caveats —
-  not a qualitative comparison.
+| Step | Choice |
+| --- | --- |
+| Model | Qwen2.5-7B-Instruct, loaded in 4-bit |
+| Data | CUAD, filtered and cleaned to the extraction task, with a documented train / validation / test split and leakage checks |
+| Method | Supervised fine-tuning with QLoRA (`peft`, `bitsandbytes`, `trl` `SFTTrainer`) |
+| Hardware | One GPU (RunPod) |
+| Evaluation | Zero-shot baseline against the fine-tuned model on the same held-out clauses; metric difference with sample-size caveats |
+
+## Status by category
+
+| Category | Done | Pending (planned) | Not planned (gaps) |
+| --- | --- | --- | --- |
+| **Plan** | Model, task, data source, method, hardware and evaluation design written (this README) | - | - |
+| **Data** | - | Download CUAD, filter to the task, split, run leakage checks | How CUAD's clause labels map to the four target fields; whether the split is by clause or by whole contract; dataset size |
+| **Training** | - | Training script and a QLoRA run | Hyperparameters, number of epochs, GPU hours and budget |
+| **Evaluation** | - | Evaluation harness; zero-shot run; fine-tuned run | Test-set size; per-field metric definitions beyond "exact match and F1"; the margin that counts as an improvement |
+| **Results** | - | A metric difference per field | None exist |
+| **Comparison with retrieval** | - | - | The README says a comparison with [LexiBridge](https://github.com/arion-a/lexibridge) may follow; no experiment is planned |
+| **Repository hygiene** | MIT `LICENSE`; legal-advice disclaimer | - | No code, tests or environment file. The GitHub description says the model is "benchmarked against a zero-shot baseline"; no benchmark has been run. |
 
 ## Why this exists
 
-Most public legal-AI tooling is prompting or RAG over a frozen model (see
-LexiBridge). This project is the complementary piece: actually training a
-model on the task, so the two approaches can eventually be compared or
-combined.
+Most public legal-AI tools prompt or retrieve over a frozen model, as [LexiBridge](https://github.com/arion-a/lexibridge) does. This project trains the model on the task instead, so that the two approaches can later be compared or combined.
 
-**Disclaimer**: for research purposes; not legal advice, and any
-downstream use should involve a licensed attorney's review.
+## Disclaimer
+
+For research purposes. Not legal advice; any downstream use needs a licensed attorney's review.
+
+## License
+
+MIT. See `LICENSE`.
